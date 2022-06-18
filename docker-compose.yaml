@@ -1,0 +1,37 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: user_management
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+
+  app:
+    container_name: app
+    build: ./app
+    command: bash -c "wait-for-it --service db:5432 && python"
+    tty: True
+    volumes:
+      - ./app:/app
+    ports:
+      - "8000:8000"
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    ports:
+      - "5050:80"
+
+volumes:
+  db_data:
+  pgadmin_data:
