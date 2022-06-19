@@ -11,6 +11,10 @@ class UserCreate(UserBase):
     password: str
 
 
+class UserEdit(BaseModel):
+    password: str
+
+
 class User(UserBase):
     is_active: bool
     is_admin: bool
