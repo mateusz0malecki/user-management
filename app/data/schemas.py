@@ -16,8 +16,6 @@ class UserEdit(BaseModel):
 
 
 class User(UserBase):
-    is_active: bool
-    is_admin: bool
     updated_at: Optional[datetime]
     created_at: Optional[datetime]
 
