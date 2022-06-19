@@ -1,19 +1,48 @@
 from fastapi import APIRouter, status, Depends, HTTPException, Response
-from typing import List
-from data import schemas, models
+
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+
+from data import schemas, models
 from data.database import get_db
 from data.hash import Hash
+
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get('/', response_model=List[schemas.User], status_code=status.HTTP_200_OK)
-async def read_users(
-        db: Session = Depends(get_db)
+@router.get('/', status_code=status.HTTP_200_OK)
+async def read_all_users(
+        db: Session = Depends(get_db),
+        page: int = 1,
+        page_size: int = 10
 ):
-    return models.User.get_all_users(db)
+    users = models.User.get_all_users(db)
+    first = (page - 1) * page_size
+    last = first + page_size
+
+    response = {
+        "page_number": page,
+        "page_size": page_size,
+        "total_record_count": len(users),
+        "pagination": {},
+        "records": users[first:last],
+    }
+
+    if last >= len(users):
+        response["pagination"]["next"] = None
+        if page > 1:
+            response["pagination"]["previous"] = f"/users?page={page - 1}&page_size={page_size}"
+        else:
+            response["pagination"]["previous"] = None
+    else:
+        response["pagination"]["next"] = f"/users?page={page + 1}&page_size={page_size}"
+        if page > 1:
+            response["pagination"]["previous"] = f"/users?page={page - 1}&page_size={page_size}"
+        else:
+            response["pagination"]["previous"] = None
+
+    return response
 
 
 @router.get('/{username}', response_model=schemas.User, status_code=status.HTTP_200_OK)
@@ -30,7 +59,7 @@ async def read_user(
     return user
 
 
-@router.post('/', response_model=schemas.User, status_code=status.HTTP_201_CREATED)
+@router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_user(
         request: schemas.UserCreate,
         db: Session = Depends(get_db)
@@ -46,12 +75,12 @@ async def create_user(
         return created_user
     except IntegrityError as e:
         return {
-            "message": "Username is already user, try again.",
+            "message": "Username is already used, try again.",
             "error": e
         }
 
 
-@router.put('/{username}', response_model=schemas.User, status_code=status.HTTP_202_ACCEPTED)
+@router.put('/{username}', status_code=status.HTTP_202_ACCEPTED)
 async def edit_user(
         username: str,
         request: schemas.UserEdit,
@@ -65,17 +94,19 @@ async def edit_user(
         )
     message = None
     if request.password == '':
-        message = "Password cannot be empty"
+        message = "Password cannot be empty."
     if not message:
         user_to_edit.update(
             {
                 "password": Hash.get_password_hash(request.password)
             }
         )
-        return user_to_edit.first()
-    return {
-        "message": message
-    }
+        message = f"User '{username}' edited."
+        return {"message": message}
+    return Response(
+        content={"message": message},
+        status_code=status.HTTP_400_BAD_REQUEST
+    )
 
 
 @router.delete('/{username}', status_code=status.HTTP_204_NO_CONTENT)
@@ -91,4 +122,4 @@ async def delete_user(
         )
     user_to_delete.delete()
     db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response()

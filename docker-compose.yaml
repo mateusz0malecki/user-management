@@ -14,24 +14,12 @@ services:
   app:
     container_name: app
     build: ./app
-    command: bash -c "wait-for-it --service db:5432 && python"
+    command: bash -c "wait-for-it --service db:5432 && alembic upgrade head && uvicorn main:app --reload --port 8000 --host 0.0.0.0"
     tty: True
     volumes:
       - ./app:/app
     ports:
       - "8000:8000"
 
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: password
-    ports:
-      - "5050:80"
-
 volumes:
   db_data:
-  pgadmin_data:
