@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
+
+from data.hash import Hash
 
 
 class UserBase(BaseModel):
@@ -10,9 +12,17 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        self.password = Hash.get_password_hash(self.password)
+
 
 class UserEdit(BaseModel):
     password: str
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        self.password = Hash.get_password_hash(self.password)
 
 
 class User(UserBase):

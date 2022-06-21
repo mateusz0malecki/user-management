@@ -9,7 +9,7 @@ from data.database import Base
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String(32), unique=True)
     password = Column(Text, nullable=False)
     is_active = Column(Boolean, default=True)
@@ -26,4 +26,4 @@ class User(Base):
 
     @staticmethod
     def get_user_by_id(db, user_id):
-        return db.query(User).filter(User.id == user_id)
+        return db.query(User).filter(User.user_id == user_id)

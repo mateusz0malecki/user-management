@@ -1,14 +1,14 @@
 from fastapi import APIRouter, status, Depends, Response
 from fastapi.responses import JSONResponse
 
+from typing import Any
+
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from data import schemas, models
 from data.database import get_db
-from data.hash import Hash
 from data.exceptions import UserNotFound
-
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -26,7 +26,7 @@ async def read_all_users(
     return response
 
 
-@router.get('/{username}', response_model=schemas.User, status_code=status.HTTP_200_OK)
+@router.get('/{user_id}', response_model=schemas.User, status_code=status.HTTP_200_OK)
 async def read_user(
         user_id: str,
         db: Session = Depends(get_db)
@@ -37,15 +37,12 @@ async def read_user(
     return user
 
 
-@router.post('/', status_code=status.HTTP_201_CREATED)
+@router.post('/', response_model=schemas.User | Any, status_code=status.HTTP_201_CREATED)
 async def create_user(
         request: schemas.UserCreate,
         db: Session = Depends(get_db)
 ):
-    created_user = models.User(
-        username=request.username,
-        password=Hash.get_password_hash(request.password)
-    )
+    created_user = models.User(**request.dict())
     try:
         db.add(created_user)
         db.commit()
@@ -58,7 +55,7 @@ async def create_user(
         }
 
 
-@router.put('/{username}', status_code=status.HTTP_202_ACCEPTED)
+@router.put('/{user_id}', status_code=status.HTTP_202_ACCEPTED)
 async def edit_user(
         user_id: str,
         request: schemas.UserEdit,
@@ -71,11 +68,7 @@ async def edit_user(
     if request.password == "":
         message = "Password cannot be empty."
     if not message:
-        user_to_edit.update(
-            {
-                "password": Hash.get_password_hash(request.password)
-            }
-        )
+        user_to_edit.update(request.dict())
         db.commit()
         message = f"User with id '{user_id}' edited."
         return {"message": message}
@@ -85,7 +78,7 @@ async def edit_user(
     )
 
 
-@router.delete('/{username}')
+@router.delete('/{user_id}')
 async def delete_user(
         user_id: str,
         db: Session = Depends(get_db)
