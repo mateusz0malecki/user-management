@@ -6,4 +6,4 @@ User has to be authenticated to perform any action except creating new user acco
 Actions available at `/users` URL.
 
 Command to run app:
-`docker-compose run`
+`docker-compose up`
