@@ -1,5 +1,4 @@
 from fastapi import APIRouter, status, Depends, Response
-from fastapi.responses import JSONResponse
 
 from typing import Any
 
@@ -64,18 +63,11 @@ async def edit_user(
     user_to_edit = models.User.get_user_by_id(db, user_id)
     if not user_to_edit.first():
         raise UserNotFound(user_id)
-    message = None
-    if request.password == "":
-        message = "Password cannot be empty."
-    if not message:
-        user_to_edit.update(request.dict())
-        db.commit()
-        message = f"User with id '{user_id}' edited."
-        return {"message": message}
-    return JSONResponse(
-        content={"message": message},
-        status_code=status.HTTP_400_BAD_REQUEST
-    )
+    user_to_edit.update(request.dict())
+    db.commit()
+    return {
+        "message": f"User with id '{user_id}' edited."
+    }
 
 
 @router.delete('/{user_id}')
