@@ -1,4 +1,5 @@
-from fastapi import APIRouter, status, Depends, HTTPException, Response
+from fastapi import APIRouter, status, Depends, Response
+from fastapi.responses import JSONResponse
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from data import schemas, models
 from data.database import get_db
 from data.hash import Hash
+from data.exceptions import UserNotFound
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -20,42 +22,18 @@ async def read_all_users(
     users = models.User.get_all_users(db)
     first = (page - 1) * page_size
     last = first + page_size
-
-    response = {
-        "page_number": page,
-        "page_size": page_size,
-        "total_record_count": len(users),
-        "pagination": {},
-        "records": users[first:last],
-    }
-
-    if last >= len(users):
-        response["pagination"]["next"] = None
-        if page > 1:
-            response["pagination"]["previous"] = f"/users?page={page - 1}&page_size={page_size}"
-        else:
-            response["pagination"]["previous"] = None
-    else:
-        response["pagination"]["next"] = f"/users?page={page + 1}&page_size={page_size}"
-        if page > 1:
-            response["pagination"]["previous"] = f"/users?page={page - 1}&page_size={page_size}"
-        else:
-            response["pagination"]["previous"] = None
-
+    response = schemas.UserPagination(users, first, last, page, page_size)
     return response
 
 
 @router.get('/{username}', response_model=schemas.User, status_code=status.HTTP_200_OK)
 async def read_user(
-        username: str,
+        user_id: str,
         db: Session = Depends(get_db)
 ):
-    user = models.User.get_user_by_username(db, username).first()
+    user = models.User.get_user_by_id(db, user_id).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with username '{username}' not found."
-        )
+        raise UserNotFound(user_id)
     return user
 
 
@@ -82,18 +60,15 @@ async def create_user(
 
 @router.put('/{username}', status_code=status.HTTP_202_ACCEPTED)
 async def edit_user(
-        username: str,
+        user_id: str,
         request: schemas.UserEdit,
         db: Session = Depends(get_db)
 ):
-    user_to_edit = models.User.get_user_by_username(db, username)
+    user_to_edit = models.User.get_user_by_id(db, user_id)
     if not user_to_edit.first():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with username '{username}' not found."
-        )
+        raise UserNotFound(user_id)
     message = None
-    if request.password == '':
+    if request.password == "":
         message = "Password cannot be empty."
     if not message:
         user_to_edit.update(
@@ -101,25 +76,23 @@ async def edit_user(
                 "password": Hash.get_password_hash(request.password)
             }
         )
-        message = f"User '{username}' edited."
+        db.commit()
+        message = f"User with id '{user_id}' edited."
         return {"message": message}
-    return Response(
+    return JSONResponse(
         content={"message": message},
         status_code=status.HTTP_400_BAD_REQUEST
     )
 
 
-@router.delete('/{username}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{username}')
 async def delete_user(
-        username: str,
+        user_id: str,
         db: Session = Depends(get_db)
 ):
-    user_to_delete = models.User.get_user_by_username(db, username)
+    user_to_delete = models.User.get_user_by_id(db, user_id)
     if not user_to_delete.first():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with username '{username}' not found."
-        )
+        raise UserNotFound(user_id)
     user_to_delete.delete()
     db.commit()
-    return Response()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

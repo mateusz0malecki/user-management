@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class UserBase(BaseModel):
@@ -21,3 +21,27 @@ class User(UserBase):
 
     class Config:
         orm_mode = True
+
+
+class UserPagination(BaseModel):
+    page_number: int = None
+    page_size: int = None
+    total_record_count: int = None
+    pagination: dict = {}
+    records: List[User] = []
+
+    def __init__(self, users, first, last, page, page_size, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.page_number = page
+        self.page_size = page_size
+        self.total_record_count = len(users)
+        self.records = users[first:last]
+
+        if last >= len(users):
+            self.pagination["next"] = None
+        else:
+            self.pagination["next"] = f"/users?page={page + 1}&page_size={page_size}"
+        if page > 1:
+            self.pagination["previous"] = f"/users?page={page - 1}&page_size={page_size}"
+        else:
+            self.pagination["previous"] = None

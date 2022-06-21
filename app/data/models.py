@@ -25,5 +25,5 @@ class User(Base):
         return db.query(User).all()
 
     @staticmethod
-    def get_user_by_username(db, username):
-        return db.query(User).filter(User.username == username)
+    def get_user_by_id(db, user_id):
+        return db.query(User).filter(User.id == user_id)
