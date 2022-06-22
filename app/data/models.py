@@ -27,3 +27,7 @@ class User(Base):
     @staticmethod
     def get_user_by_id(db, user_id):
         return db.query(User).filter(User.user_id == user_id)
+
+    @staticmethod
+    def get_user_by_username(db, username):
+        return db.query(User).filter(User.username == username)

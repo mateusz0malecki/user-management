@@ -55,3 +55,11 @@ class UserPagination(BaseModel):
             self.pagination["previous"] = f"/users?page={page - 1}&page_size={page_size}"
         else:
             self.pagination["previous"] = None
+
+
+class Token(BaseModel):
+    access_token: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None

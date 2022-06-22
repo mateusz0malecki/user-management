@@ -9,11 +9,14 @@ from data import schemas, models
 from data.database import get_db
 from data.exceptions import UserNotFound
 
+from routers.auth import get_current_user
+
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get('/', status_code=status.HTTP_200_OK)
 async def read_all_users(
+        current_user: schemas.User = Depends(get_current_user),
         db: Session = Depends(get_db),
         page: int = 1,
         page_size: int = 10
