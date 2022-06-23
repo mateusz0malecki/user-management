@@ -20,6 +20,9 @@ services:
       - ./app:/app
     ports:
       - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY-secret_key}
+      - ALGORITHM=${ALGORITHM-HS256}
 
 volumes:
   db_data:

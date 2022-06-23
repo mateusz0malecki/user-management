@@ -8,18 +8,35 @@ from sqlalchemy.exc import IntegrityError
 from data import schemas, models
 from data.database import get_db
 from data.exceptions import UserNotFound
-
-from routers.auth import get_current_user
+from data.jwt_helper import check_if_active_user, check_if_superuser
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get('/', status_code=status.HTTP_200_OK)
+@router.get(
+    "/me",
+    response_model=schemas.User,
+    status_code=status.HTTP_200_OK
+)
+async def read_user(
+    db: Session = Depends(get_db),
+    current_user: schemas.UserCheck = Depends(check_if_active_user),
+):
+    user = models.User.get_user_by_id(db, str(current_user.user_id)).first()
+    if not user:
+        raise UserNotFound(str(current_user.user_id))
+    return user
+
+
+@router.get(
+    "/",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(check_if_superuser)]
+)
 async def read_all_users(
-        current_user: schemas.User = Depends(get_current_user),
-        db: Session = Depends(get_db),
-        page: int = 1,
-        page_size: int = 10
+    db: Session = Depends(get_db),
+    page: int = 1,
+    page_size: int = 10
 ):
     users = models.User.get_all_users(db)
     first = (page - 1) * page_size
@@ -28,10 +45,15 @@ async def read_all_users(
     return response
 
 
-@router.get('/{user_id}', response_model=schemas.User, status_code=status.HTTP_200_OK)
+@router.get(
+    "/{user_id}",
+    response_model=schemas.User,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(check_if_superuser)],
+)
 async def read_user(
-        user_id: str,
-        db: Session = Depends(get_db)
+    user_id: str,
+    db: Session = Depends(get_db)
 ):
     user = models.User.get_user_by_id(db, user_id).first()
     if not user:
@@ -39,10 +61,15 @@ async def read_user(
     return user
 
 
-@router.post('/', response_model=schemas.User | Any, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=schemas.User | Any,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_if_superuser)],
+)
 async def create_user(
-        request: schemas.UserCreate,
-        db: Session = Depends(get_db)
+    request: schemas.UserCreate,
+    db: Session = Depends(get_db),
 ):
     created_user = models.User(**request.dict())
     try:
@@ -57,26 +84,31 @@ async def create_user(
         }
 
 
-@router.put('/{user_id}', status_code=status.HTTP_202_ACCEPTED)
+@router.put(
+    "/{user_id}",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(check_if_superuser)],
+)
 async def edit_user(
-        user_id: str,
-        request: schemas.UserEdit,
-        db: Session = Depends(get_db)
+    user_id: str,
+    request: schemas.UserEdit,
+    db: Session = Depends(get_db),
 ):
     user_to_edit = models.User.get_user_by_id(db, user_id)
     if not user_to_edit.first():
         raise UserNotFound(user_id)
     user_to_edit.update(request.dict())
     db.commit()
-    return {
-        "message": f"User with id '{user_id}' edited."
-    }
+    return {"message": f"User with id '{user_id}' edited."}
 
 
-@router.delete('/{user_id}')
+@router.delete(
+    "/{user_id}",
+    dependencies=[Depends(check_if_superuser)]
+)
 async def delete_user(
-        user_id: str,
-        db: Session = Depends(get_db)
+    user_id: str,
+    db: Session = Depends(get_db),
 ):
     user_to_delete = models.User.get_user_by_id(db, user_id)
     if not user_to_delete.first():

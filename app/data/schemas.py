@@ -33,6 +33,15 @@ class User(UserBase):
         orm_mode = True
 
 
+class UserCheck(User):
+    user_id: str
+    is_active: bool
+    is_admin: bool
+
+    class Config:
+        orm_mode = True
+
+
 class UserPagination(BaseModel):
     page_number: int = None
     page_size: int = None
