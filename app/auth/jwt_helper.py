@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 
 from jose import JWTError, jwt
 
-from data import schemas
-from data.database import get_db
-from data.models import User
-from data.hash import Hash
-from data.exceptions import CredentialsException
+from schemas import user_schemas, token_schemas
+from db.database import get_db
+from models.user_model import User
+from auth.hash import Hash
+from exceptions.exceptions import CredentialsException
 
 from datetime import timedelta, datetime
 
@@ -55,7 +55,7 @@ def get_current_user(
         username: str = payload.get("sub")
         if username is None:
             raise CredentialsException
-        token_data = schemas.TokenData(username=username)
+        token_data = token_schemas.TokenData(username=username)
     except JWTError:
         raise CredentialsException
     user = User.get_user_by_username(db, username=token_data.username).first()
@@ -64,7 +64,7 @@ def get_current_user(
     return user
 
 
-def check_if_active_user(current_user: schemas.UserCheck = Depends(get_current_user)):
+def check_if_active_user(current_user: user_schemas.UserCheck = Depends(get_current_user)):
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -73,7 +73,7 @@ def check_if_active_user(current_user: schemas.UserCheck = Depends(get_current_u
     return current_user
 
 
-def check_if_superuser(current_user: schemas.UserCheck = Depends(get_current_user)):
+def check_if_superuser(current_user: user_schemas.UserCheck = Depends(get_current_user)):
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

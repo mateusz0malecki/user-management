@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List, Any
 
-from data.hash import Hash
+from auth.hash import Hash
 
 
 class UserBase(BaseModel):
@@ -64,11 +64,3 @@ class UserPagination(BaseModel):
             self.pagination["previous"] = f"/users?page={page - 1}&page_size={page_size}"
         else:
             self.pagination["previous"] = None
-
-
-class Token(BaseModel):
-    access_token: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None

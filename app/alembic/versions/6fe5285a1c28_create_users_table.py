@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 import uuid
-from data.hash import Hash
+from auth.hash import Hash
 
 # revision identifiers, used by Alembic.
 revision = '6fe5285a1c28'
